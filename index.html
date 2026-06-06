@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My Web TV</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+<body>
+
+<h2>My Web TV</h2>
+
+<select id="channelSelect">
+  <option value="https://tvsen6.aynaott.com/btvctg/index.m3u8">BTV CTG</option>
+  <option value="https://tvsen6.aynaott.com/channel1/index.m3u8">Channel I</option>
+  <option value="https://tvsen5.aynaott.com/ntv/index.m3u8">NTV</option>
+</select>
+
+<br><br>
+
+<video id="video" controls width="100%"></video>
+
+<script>
+const video = document.getElementById('video');
+const channelSelect = document.getElementById('channelSelect');
+
+function playChannel(url) {
+  if (Hls.isSupported()) {
+    const hls = new Hls();
+    hls.loadSource(url);
+    hls.attachMedia(video);
+  } else {
+    video.src = url;
+  }
+}
+
+channelSelect.addEventListener('change', () => {
+  playChannel(channelSelect.value);
+});
+
+playChannel(channelSelect.value);
+</script>
+
+</body>
+</html>
