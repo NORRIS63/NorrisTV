@@ -16,214 +16,290 @@ font-family:Arial,sans-serif;
 }
 
 body{
-background:#0d1117;
+background:#141414;
 color:white;
+overflow-x:hidden;
 }
+
+/* Header */
 
 header{
-background:#161b22;
-padding:15px;
-text-align:center;
+position:sticky;
+top:0;
+z-index:999;
+background:linear-gradient(to bottom,#000,rgba(0,0,0,.5));
+padding:15px 20px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
+
+.logo{
 font-size:28px;
 font-weight:bold;
-box-shadow:0 2px 10px rgba(0,0,0,0.4);
+color:#e50914;
 }
 
-.container{
-display:flex;
-height:calc(100vh - 70px);
-}
-
-.sidebar{
-width:350px;
-background:#161b22;
-overflow-y:auto;
-border-right:1px solid #333;
-}
-
-.search-box{
-padding:12px;
-}
-
-.search-box input{
-width:100%;
-padding:12px;
+.search{
+width:220px;
+padding:10px 15px;
 border:none;
-border-radius:10px;
-background:#21262d;
+border-radius:30px;
+background:#2a2a2a;
 color:white;
-font-size:16px;
+outline:none;
 }
 
-.channel-list{
-padding:10px;
+/* Player */
+
+.player-wrapper{
+padding:15px;
 }
 
-.channel{
-display:flex;
-align-items:center;
-padding:10px;
-margin-bottom:8px;
-background:#21262d;
-border-radius:12px;
-cursor:pointer;
-transition:0.2s;
-}
-
-.channel:hover{
-background:#30363d;
-transform:scale(1.02);
-}
-
-.channel img{
-width:50px;
-height:50px;
-object-fit:contain;
-background:white;
-border-radius:10px;
-margin-right:12px;
-}
-
-.channel-info{
-display:flex;
-flex-direction:column;
-}
-
-.channel-name{
-font-weight:bold;
-font-size:16px;
-}
-
-.channel-group{
-font-size:12px;
-color:#aaa;
-}
-
-.player-section{
-flex:1;
-display:flex;
-flex-direction:column;
-padding:20px;
-}
-
-#video{
+video{
 width:100%;
-height:70vh;
+height:55vh;
 background:black;
-border-radius:15px;
+border-radius:16px;
+object-fit:cover;
 }
 
 .now-playing{
-margin-top:15px;
 font-size:22px;
 font-weight:bold;
+margin-top:12px;
+}
+
+/* Categories */
+
+.section{
+padding:15px;
+}
+
+.section-title{
+font-size:22px;
+margin-bottom:12px;
+font-weight:bold;
+}
+
+/* Channel cards */
+
+.channel-row{
+display:flex;
+overflow-x:auto;
+gap:14px;
+scroll-behavior:smooth;
+padding-bottom:10px;
+}
+
+.channel-row::-webkit-scrollbar{
+display:none;
+}
+
+.channel-card{
+min-width:140px;
+background:#222;
+border-radius:14px;
+overflow:hidden;
+cursor:pointer;
+transition:.25s;
+flex-shrink:0;
+}
+
+.channel-card:hover{
+transform:scale(1.08);
+}
+
+.channel-card img{
+width:100%;
+height:100px;
+object-fit:contain;
+background:white;
+padding:8px;
+}
+
+.channel-info{
+padding:10px;
+}
+
+.channel-name{
+font-size:15px;
+font-weight:bold;
+}
+
+.group-name{
+font-size:12px;
+color:#aaa;
+margin-top:4px;
+}
+
+/* Mobile */
+
+@media(max-width:768px){
+
+.search{
+width:140px;
+font-size:14px;
+}
+
+video{
+height:32vh;
+}
+
+.channel-card{
+min-width:120px;
+}
+
+.channel-card img{
+height:85px;
+}
+
+.logo{
+font-size:22px;
+}
+
+.now-playing{
+font-size:18px;
+}
 }
 </style>
 </head>
 
 <body>
 
-<header>📺 Norris TV</header>
+<header>
+<div class="logo">Norris TV</div>
+<input type="text" class="search" id="search" placeholder="Search channels">
+</header>
 
-<div class="container">
-
-<div class="sidebar">
-
-<div class="search-box">
-<input type="text" id="search" placeholder="Search channel...">
-</div>
-
-<div class="channel-list" id="channelList"></div>
-
-</div>
-
-<div class="player-section">
+<div class="player-wrapper">
 <video id="video" controls autoplay></video>
 <div class="now-playing" id="nowPlaying">
 Select a channel
 </div>
 </div>
 
-</div>
+<div id="categories"></div>
 
 <script>
+
 const playlistURL = "playlist.m3u";
 
-const video = document.getElementById("video");
-const channelList = document.getElementById("channelList");
-const search = document.getElementById("search");
-const nowPlaying = document.getElementById("nowPlaying");
+const video =
+document.getElementById("video");
+
+const nowPlaying =
+document.getElementById("nowPlaying");
+
+const categoriesDiv =
+document.getElementById("categories");
+
+const searchInput =
+document.getElementById("search");
 
 let channels = [];
 
 fetch(playlistURL)
-.then(res => res.text())
-.then(data => {
+.then(res=>res.text())
+.then(data=>{
 parseM3U(data);
-renderChannels(channels);
+renderCategories(channels);
 });
 
 function parseM3U(data){
-const lines = data.split("\n");
+
+const lines =
+data.split("\n");
 
 for(let i=0;i<lines.length;i++){
 
 if(lines[i].startsWith("#EXTINF")){
 
 const info = lines[i];
-
-const url = lines[i+1]?.trim();
+const url =
+lines[i+1]?.trim();
 
 const name =
 info.split(",").pop().trim();
 
-const logoMatch =
+const logo =
 info.match(/tvg-logo="(.*?)"/);
 
-const groupMatch =
+const group =
 info.match(/group-title="(.*?)"/);
 
 channels.push({
-name:name,
-url:url,
-logo:logoMatch ? logoMatch[1] : "",
-group:groupMatch ? groupMatch[1] : "Unknown"
+name,
+url,
+logo: logo ? logo[1] : "",
+group: group ? group[1] : "Others"
 });
 }
 }
 }
 
-function renderChannels(list){
+function renderCategories(list){
 
-channelList.innerHTML="";
+categoriesDiv.innerHTML="";
+
+const grouped = {};
 
 list.forEach(channel=>{
 
-const div=document.createElement("div");
-div.className="channel";
+if(!grouped[channel.group]){
+grouped[channel.group]=[];
+}
 
-div.innerHTML=`
-<img src="${channel.logo}" onerror="this.src='https://via.placeholder.com/50'">
+grouped[channel.group].push(channel);
+});
+
+Object.keys(grouped)
+.forEach(group=>{
+
+const section =
+document.createElement("div");
+
+section.className =
+"section";
+
+section.innerHTML =
+`
+<div class="section-title">
+${group}
+</div>
+<div class="channel-row">
+${grouped[group].map(ch=>`
+<div class="channel-card"
+onclick="playChannel('${ch.url}','${ch.name}')">
+
+<img src="${ch.logo}"
+onerror="this.src='https://via.placeholder.com/150'">
+
 <div class="channel-info">
-<div class="channel-name">${channel.name}</div>
-<div class="channel-group">${channel.group}</div>
+<div class="channel-name">
+${ch.name}
+</div>
+
+<div class="group-name">
+${ch.group}
+</div>
+</div>
+
+</div>
+`).join("")}
 </div>
 `;
 
-div.onclick=()=>{
-playChannel(channel.url);
-nowPlaying.innerText="Now Playing: "+channel.name;
-};
-
-channelList.appendChild(div);
+categoriesDiv.appendChild(section);
 });
 }
 
-function playChannel(url){
+function playChannel(url,name){
 
 if(Hls.isSupported()){
 
-const hls = new Hls();
+const hls =
+new Hls();
 
 hls.loadSource(url);
 hls.attachMedia(video);
@@ -231,19 +307,27 @@ hls.attachMedia(video);
 }else{
 video.src=url;
 }
+
+nowPlaying.innerText =
+"Now Playing: " + name;
+
+video.play();
 }
 
-search.addEventListener("input",()=>{
+searchInput
+.addEventListener("input",()=>{
 
 const value =
-search.value.toLowerCase();
+searchInput.value
+.toLowerCase();
 
 const filtered =
 channels.filter(c=>
-c.name.toLowerCase().includes(value)
+c.name.toLowerCase()
+.includes(value)
 );
 
-renderChannels(filtered);
+renderCategories(filtered);
 
 });
 </script>
