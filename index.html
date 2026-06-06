@@ -1,42 +1,251 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>My Web TV</title>
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-</head>
-<body>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Norris TV</title>
 
-<h2>My Web TV</h2>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
-<select id="channelSelect">
-  <option value="https://tvsen6.aynaott.com/btvctg/index.m3u8">BTV CTG</option>
-  <option value="https://tvsen6.aynaott.com/channel1/index.m3u8">Channel I</option>
-  <option value="https://tvsen5.aynaott.com/ntv/index.m3u8">NTV</option>
-</select>
-
-<br><br>
-
-<video id="video" controls width="100%"></video>
-
-<script>
-const video = document.getElementById('video');
-const channelSelect = document.getElementById('channelSelect');
-
-function playChannel(url) {
-  if (Hls.isSupported()) {
-    const hls = new Hls();
-    hls.loadSource(url);
-    hls.attachMedia(video);
-  } else {
-    video.src = url;
-  }
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial,sans-serif;
 }
 
-channelSelect.addEventListener('change', () => {
-  playChannel(channelSelect.value);
+body{
+background:#0d1117;
+color:white;
+}
+
+header{
+background:#161b22;
+padding:15px;
+text-align:center;
+font-size:28px;
+font-weight:bold;
+box-shadow:0 2px 10px rgba(0,0,0,0.4);
+}
+
+.container{
+display:flex;
+height:calc(100vh - 70px);
+}
+
+.sidebar{
+width:350px;
+background:#161b22;
+overflow-y:auto;
+border-right:1px solid #333;
+}
+
+.search-box{
+padding:12px;
+}
+
+.search-box input{
+width:100%;
+padding:12px;
+border:none;
+border-radius:10px;
+background:#21262d;
+color:white;
+font-size:16px;
+}
+
+.channel-list{
+padding:10px;
+}
+
+.channel{
+display:flex;
+align-items:center;
+padding:10px;
+margin-bottom:8px;
+background:#21262d;
+border-radius:12px;
+cursor:pointer;
+transition:0.2s;
+}
+
+.channel:hover{
+background:#30363d;
+transform:scale(1.02);
+}
+
+.channel img{
+width:50px;
+height:50px;
+object-fit:contain;
+background:white;
+border-radius:10px;
+margin-right:12px;
+}
+
+.channel-info{
+display:flex;
+flex-direction:column;
+}
+
+.channel-name{
+font-weight:bold;
+font-size:16px;
+}
+
+.channel-group{
+font-size:12px;
+color:#aaa;
+}
+
+.player-section{
+flex:1;
+display:flex;
+flex-direction:column;
+padding:20px;
+}
+
+#video{
+width:100%;
+height:70vh;
+background:black;
+border-radius:15px;
+}
+
+.now-playing{
+margin-top:15px;
+font-size:22px;
+font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<header>📺 Norris TV</header>
+
+<div class="container">
+
+<div class="sidebar">
+
+<div class="search-box">
+<input type="text" id="search" placeholder="Search channel...">
+</div>
+
+<div class="channel-list" id="channelList"></div>
+
+</div>
+
+<div class="player-section">
+<video id="video" controls autoplay></video>
+<div class="now-playing" id="nowPlaying">
+Select a channel
+</div>
+</div>
+
+</div>
+
+<script>
+const playlistURL = "playlist.m3u";
+
+const video = document.getElementById("video");
+const channelList = document.getElementById("channelList");
+const search = document.getElementById("search");
+const nowPlaying = document.getElementById("nowPlaying");
+
+let channels = [];
+
+fetch(playlistURL)
+.then(res => res.text())
+.then(data => {
+parseM3U(data);
+renderChannels(channels);
 });
 
-playChannel(channelSelect.value);
+function parseM3U(data){
+const lines = data.split("\n");
+
+for(let i=0;i<lines.length;i++){
+
+if(lines[i].startsWith("#EXTINF")){
+
+const info = lines[i];
+
+const url = lines[i+1]?.trim();
+
+const name =
+info.split(",").pop().trim();
+
+const logoMatch =
+info.match(/tvg-logo="(.*?)"/);
+
+const groupMatch =
+info.match(/group-title="(.*?)"/);
+
+channels.push({
+name:name,
+url:url,
+logo:logoMatch ? logoMatch[1] : "",
+group:groupMatch ? groupMatch[1] : "Unknown"
+});
+}
+}
+}
+
+function renderChannels(list){
+
+channelList.innerHTML="";
+
+list.forEach(channel=>{
+
+const div=document.createElement("div");
+div.className="channel";
+
+div.innerHTML=`
+<img src="${channel.logo}" onerror="this.src='https://via.placeholder.com/50'">
+<div class="channel-info">
+<div class="channel-name">${channel.name}</div>
+<div class="channel-group">${channel.group}</div>
+</div>
+`;
+
+div.onclick=()=>{
+playChannel(channel.url);
+nowPlaying.innerText="Now Playing: "+channel.name;
+};
+
+channelList.appendChild(div);
+});
+}
+
+function playChannel(url){
+
+if(Hls.isSupported()){
+
+const hls = new Hls();
+
+hls.loadSource(url);
+hls.attachMedia(video);
+
+}else{
+video.src=url;
+}
+}
+
+search.addEventListener("input",()=>{
+
+const value =
+search.value.toLowerCase();
+
+const filtered =
+channels.filter(c=>
+c.name.toLowerCase().includes(value)
+);
+
+renderChannels(filtered);
+
+});
 </script>
 
 </body>
