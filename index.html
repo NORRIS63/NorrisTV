@@ -342,10 +342,74 @@ top:325px;
 }
 
 .channel-grid{
+display:grid;
 grid-template-columns:
-repeat(3,1fr);
-gap:10px;
-padding:10px;
+repeat(auto-fill,minmax(130px,1fr));
+gap:16px;
+padding:15px;
+}
+
+/* TV / DESKTOP MODE */
+@media(min-width:900px){
+
+.player-box{
+max-width:1400px;
+margin:auto;
+padding:15px 20px;
+}
+
+video{
+height:500px;
+border-radius:28px;
+object-fit:cover;
+}
+
+.group-tabs{
+top:620px;
+padding:14px 20px;
+justify-content:center;
+gap:14px;
+}
+
+.group-tab{
+font-size:18px;
+padding:12px 22px;
+border-radius:40px;
+}
+
+.channel-grid{
+grid-template-columns:
+repeat(6,1fr);
+gap:22px;
+padding:20px 30px;
+}
+
+.channel{
+border-radius:24px;
+}
+
+.channel img{
+height:130px;
+padding:12px;
+}
+
+.channel-name{
+font-size:16px;
+padding:12px;
+min-height:60px;
+}
+
+.logo{
+font-size:40px;
+}
+
+.search-box{
+width:320px;
+}
+
+.search-box input{
+font-size:18px;
+padding:14px 18px;
 }
 
 .channel img{
