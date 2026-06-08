@@ -4,351 +4,332 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Norris TV</title>
+
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
+
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
-
-body{background:#000;color:white;overflow:hidden;height:100vh;}
-
-/* HEADER */
-.header{position:sticky;top:0;z-index:10000;background:#000;padding:2px;text-align:center;border-top:1px solid red;border-bottom:1px solid red;}
-.header h1{font-size:24px;color:#ff1a1a;text-shadow:0 0 15px red;}
-.header-inner{position:relative;width:100%;height:36px;}
-.header h1{text-align:center;line-height:36px;margin:0;}
-
-/* PLAYER */
-.player-box{position:relative;width:100%;background:black;}
-video{width:100%;height:250px;background:black;object-fit:fill;}
-
-/* CONTROLS */
-.custom-controls{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;gap:15px;z-index:999;transition:.4s;}
-.control-btn{width:58px;height:58px;border:none;border-radius:50%;background:red;color:white;font-size:22px;display:flex;justify-content:center;align-items:center;cursor:pointer;box-shadow:0 0 15px rgba(255,0,0,.6);}
-
-/* SEARCH */
-.search-box{padding:2px;position:sticky;top:250px;z-index:9998;background:black;}
-.search-box input{width:100%;padding:4px;font-size:12px;border:none;outline:none;border-radius:10px;background:#111;color:white;}
-
-/* GROUP TABS */
-.group-tabs{display:flex;overflow-x:auto;gap:6px;padding:6px;background:#000;position:sticky;top:286px;z-index:9997;}
-.group-tabs::-webkit-scrollbar{display:none;}
-.group-tab{background:#111;color:white;border:1px solid #00cfff;border-radius:12px;padding:6px 10px;cursor:pointer;white-space:nowrap;font-size:13px;}
-.group-tab.active-tab{background:#00cfff;color:black;font-weight:bold;}
-
-/* CHANNEL GRID — KEY FIX: overflow-y:auto with fixed height */
-.channel-grid{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:12px;
-  padding:12px;
-  overflow-y:auto;
-  overflow-x:hidden;
-  /* height is set dynamically by JS so it always fits the screen */
-  height:calc(100vh - 380px);
-  padding-bottom:20px;
-  align-content:start;
-  -webkit-overflow-scrolling:touch;
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial,sans-serif;
 }
 
-/* CHANNEL */
-.channel{background:white;border-radius:20px;padding:4px;height:75px;display:flex;justify-content:center;align-items:center;cursor:pointer;border:2px solid #00cfff;box-shadow:0 0 12px rgba(0,207,255,.5);transition:.3s;position:relative;}
-.channel:hover{transform:scale(1.03);}
-.channel img{width:75%;height:75%;object-fit:fill;}
-.active{border:3px solid #00ff84 !important;box-shadow:0 0 18px #00ff84,0 0 28px rgba(0,255,132,.8);}
-.channel-name{position:absolute;bottom:2px;left:0;right:0;font-size:10px;text-align:center;color:#fff;background:rgba(0,0,0,.6);border-radius:0 0 12px 12px;padding:1px;}
-.fav-btn{position:absolute;top:2px;right:4px;font-size:18px;z-index:5;cursor:pointer;}
+body{
+background:#141414;
+color:white;
+overflow-x:hidden;
+}
 
-/* LIVE COUNTER */
-.live-counter{position:fixed;left:15px;bottom:60px;z-index:99999;background:rgba(0,0,0,.80);padding:12px 16px;border-radius:18px;font-size:12px;font-weight:bold;color:white;backdrop-filter:blur(10px);box-shadow:0 0 14px rgba(0,255,100,.5);opacity:1;transition:.4s;}
+/* Header */
 
-/* CONTACT */
-.contact-title{text-align:center;font-size:12px;font-weight:bold;margin-top:0;margin-bottom:0;color:white;text-shadow:0 0 10px red;}
-.social-box{display:flex;justify-content:center;gap:10px;padding-bottom:0;}
-.social-box a{width:35px;height:35px;border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:20px;text-decoration:none;color:white;}
-.telegram{background:#229ED9;}
-.facebook{background:#1877F2;}
+header{
+position:sticky;
+top:0;
+z-index:999;
+background:linear-gradient(to bottom,#000,rgba(0,0,0,.5));
+padding:15px 20px;
+display:flex;
+justify-content:space-between;
+align-items:center;
+}
 
-/* FOOTER */
-.footer{text-align:center;padding:2px;font-size:12px;font-weight:bold;border-top:2px solid red;}
-.footer span{color:red;}
+.logo{
+font-size:28px;
+font-weight:bold;
+color:#e50914;
+}
 
-/* DARK MODE */
-body.darkmode .channel{background:#121212 !important;border-color:#333 !important;box-shadow:none !important;}
-body.darkmode .channel img{filter:brightness(.75) contrast(.95);}
+.search{
+width:220px;
+padding:10px 15px;
+border:none;
+border-radius:30px;
+background:#2a2a2a;
+color:white;
+outline:none;
+}
 
-/* LOADING SPINNER */
-#loadingSpinner{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10000;font-size:22px;background:rgba(0,0,0,.35);padding:4px 8px;border-radius:50%;}
+/* Player */
 
-/* BUTTONS */
-#themeToggle{background:transparent !important;color:#ffcc33;border:none !important;border-radius:0 !important;padding:0 !important;margin:0 !important;cursor:pointer;box-shadow:none !important;font-size:18px;position:absolute !important;right:8px !important;top:50% !important;transform:translateY(-50%) !important;}
-#refreshBtn{position:absolute;left:8px;top:50%;transform:translateY(-50%);z-index:100001;width:34px;height:34px;background:#000;color:#ffcc33;border:1px solid #222;border-radius:50%;box-shadow:none;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;}
+.player-wrapper{
+padding:15px;
+}
 
-/* NOTICE */
-.notice-bar{display:flex;align-items:center;background:#0b0b0b;border-top:1px solid #222;border-bottom:1px solid #222;height:26px;overflow:hidden;}
-.notice-label{background:#c62828;color:#fff;font-weight:600;padding:0 8px;height:26px;display:flex;align-items:center;flex-shrink:0;font-size:11px;}
-.notice-scroll{flex:1;color:#ffd54a;font-size:11px;}
+video{
+width:100%;
+height:55vh;
+background:black;
+border-radius:16px;
+object-fit:cover;
+}
 
-/* DESKTOP */
-@media(min-width:900px){
-  video{height:620px !important;}
-  .channel-grid{grid-template-columns:repeat(8,1fr) !important;gap:14px !important;height:calc(100vh - 760px) !important;padding-bottom:180px !important;}
-  .channel{height:95px !important;}
-  .channel-name{font-size:11px !important;}
-  .search-box{top:620px !important;}
-  .group-tabs{top:656px !important;}
+.now-playing{
+font-size:22px;
+font-weight:bold;
+margin-top:12px;
+}
+
+/* Categories */
+
+.section{
+padding:15px;
+}
+
+.section-title{
+font-size:22px;
+margin-bottom:12px;
+font-weight:bold;
+}
+
+/* Channel cards */
+
+.channel-row{
+display:flex;
+overflow-x:auto;
+gap:14px;
+scroll-behavior:smooth;
+padding-bottom:10px;
+}
+
+.channel-row::-webkit-scrollbar{
+display:none;
+}
+
+.channel-card{
+min-width:140px;
+background:#222;
+border-radius:14px;
+overflow:hidden;
+cursor:pointer;
+transition:.25s;
+flex-shrink:0;
+}
+
+.channel-card:hover{
+transform:scale(1.08);
+}
+
+.channel-card img{
+width:100%;
+height:100px;
+object-fit:contain;
+background:white;
+padding:8px;
+}
+
+.channel-info{
+padding:10px;
+}
+
+.channel-name{
+font-size:15px;
+font-weight:bold;
+}
+
+.group-name{
+font-size:12px;
+color:#aaa;
+margin-top:4px;
+}
+
+/* Mobile */
+
+@media(max-width:768px){
+
+.search{
+width:140px;
+font-size:14px;
+}
+
+video{
+height:32vh;
+}
+
+.channel-card{
+min-width:120px;
+}
+
+.channel-card img{
+height:85px;
+}
+
+.logo{
+font-size:22px;
+}
+
+.now-playing{
+font-size:18px;
+}
 }
 </style>
 </head>
+
 <body>
 
-<!-- HEADER -->
-<div class="header">
-  <div class="header-inner">
-    <button id="refreshBtn" title="Refresh" onclick="location.reload()">
-      <i class="fas fa-rotate-right"></i>
-    </button>
-    <h1>Norris TV</h1>
-    <button id="themeToggle" title="Dark Mode" onclick="document.body.classList.toggle('darkmode')">🌙</button>
-  </div>
+<header>
+<div class="logo">Norris TV</div>
+<input type="text" class="search" id="search" placeholder="Search channels">
+</header>
+
+<div class="player-wrapper">
+<video id="video" controls autoplay></video>
+<div class="now-playing" id="nowPlaying">
+Select a channel
+</div>
 </div>
 
-<!-- LIVE COUNTER -->
-<div class="live-counter">
-  🟢 Live Users : <span id="liveUsers">0</span><br>
-  👁 Total Views : <span id="totalViews">0</span>
-</div>
-
-<!-- PLAYER -->
-<div class="player-box">
-  <video id="video" autoplay playsinline controls></video>
-  <div id="loadingSpinner">⏳</div>
-  <div class="custom-controls" id="customControls">
-    <button class="control-btn" onclick="prevChannel()">⏮</button>
-    <button class="control-btn" onclick="togglePlay()">⏯</button>
-    <button class="control-btn" onclick="nextChannel()">⏭</button>
-  </div>
-</div>
-
-<!-- NOTICE -->
-<div class="notice-bar">
-  <div class="notice-label">NOTICE</div>
-  <div class="notice-scroll">
-    <marquee scrollamount="3">📺 Welcome to Norris TV — Your free IPTV experience. Enjoy live channels anytime, anywhere. If any channel is not working, try refreshing. For best experience use a compatible browser.</marquee>
-  </div>
-</div>
-
-<!-- SEARCH -->
-<div class="search-box">
-  <input type="text" id="search" placeholder="Search Channel..." oninput="searchChannels()">
-</div>
-
-<!-- GROUP TABS -->
-<div class="group-tabs" id="groupTabs"></div>
-
-<!-- CHANNELS -->
-<div class="channel-grid" id="channelGrid"></div>
+<div id="categories"></div>
 
 <script>
-const playlist = 'https://raw.githubusercontent.com/Rakib49/Rakibiptv/refs/heads/main/aynaott.m3u';
+
+const playlistURL = "playlist.m3u";
+
+const video =
+document.getElementById("video");
+
+const nowPlaying =
+document.getElementById("nowPlaying");
+
+const categoriesDiv =
+document.getElementById("categories");
+
+const searchInput =
+document.getElementById("search");
 
 let channels = [];
-let filteredChannels = [];
-let currentIndex = 0;
-let currentGroup = 'All';
-let favorites = JSON.parse(localStorage.getItem('norrisfavorites') || '[]');
-let activeHls = null;
 
-/* RECALCULATE grid height on resize */
-function fixGridHeight() {
-  const grid = document.getElementById('channelGrid');
-  const gridTop = grid.getBoundingClientRect().top + window.scrollY;
-  // On mobile, body is overflow:hidden so we use window.innerHeight
-  const available = window.innerHeight - gridTop;
-  grid.style.height = Math.max(150, available) + 'px';
+fetch(playlistURL)
+.then(res=>res.text())
+.then(data=>{
+parseM3U(data);
+renderCategories(channels);
+});
+
+function parseM3U(data){
+
+const lines =
+data.split("\n");
+
+for(let i=0;i<lines.length;i++){
+
+if(lines[i].startsWith("#EXTINF")){
+
+const info = lines[i];
+const url =
+lines[i+1]?.trim();
+
+const name =
+info.split(",").pop().trim();
+
+const logo =
+info.match(/tvg-logo="(.*?)"/);
+
+const group =
+info.match(/group-title="(.*?)"/);
+
+channels.push({
+name,
+url,
+logo: logo ? logo[1] : "",
+group: group ? group[1] : "Others"
+});
 }
-window.addEventListener('resize', fixGridHeight);
-
-/* LOAD PLAYLIST */
-fetch(playlist)
-  .then(r => r.text())
-  .then(data => {
-    const lines = data.split('\n');
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].startsWith('#EXTINF')) {
-        const info = lines[i];
-        const url = (lines[i+1] || '').trim();
-        if (!url || url.startsWith('#')) continue;
-        const name = info.split(',').slice(1).join(',').trim();
-        const logo = (info.match(/tvg-logo="(.*?)"/) || [])[1] || '';
-        const group = (info.match(/group-title="(.*?)"/i) || [])[1] || 'Other';
-        channels.push({ name, url, logo, group });
-      }
-    }
-    buildTabs();
-    filteredChannels = channels;
-    renderChannels();
-    fixGridHeight();
-    if (channels.length > 0) playChannel(0);
-  })
-  .catch(() => {
-    document.getElementById('channelGrid').innerHTML =
-      '<p style="color:#e55;padding:20px;grid-column:1/-1">⚠ Could not load playlist. Check your internet connection.</p>';
-    fixGridHeight();
-  });
-
-function normalizeGroup(g) {
-  g = (g || '').toLowerCase();
-  if (['bangla','bangladesh','indian bangla','inbangla'].includes(g)) return 'Bangla';
-  if (g.includes('world cup') || g.includes('fifa')) return '🏆 FIFA World Cup';
-  if (g.includes('sport')) return 'Sports';
-  if (g.includes('news')) return 'News';
-  if (g.includes('movie')) return 'Movies';
-  if (g.includes('music')) return 'Music';
-  if (g.includes('kid')) return 'Kids';
-  if (['english','hindi','urdhu'].includes(g)) return 'International';
-  if (['entertainment','drama'].includes(g)) return 'Entertainment';
-  return 'Others';
+}
 }
 
-function buildTabs() {
-  const tabs = document.getElementById('groupTabs');
-  const groups = ['All','❤️ Favorites','Bangla','🏆 FIFA World Cup','Sports','News','Entertainment','Movies','Music','Kids','International','Others'];
-  tabs.innerHTML = groups.map(g =>
-    `<button class="group-tab ${g==='All'?'active-tab':''}" onclick="filterGroup('${g}',this)">${g}</button>`
-  ).join('');
+function renderCategories(list){
+
+categoriesDiv.innerHTML="";
+
+const grouped = {};
+
+list.forEach(channel=>{
+
+if(!grouped[channel.group]){
+grouped[channel.group]=[];
 }
 
-function filterGroup(group, btn) {
-  currentGroup = group;
-  document.querySelectorAll('.group-tab').forEach(x => x.classList.remove('active-tab'));
-  if (btn) btn.classList.add('active-tab');
-  if (group === 'All') {
-    filteredChannels = channels;
-  } else if (group === '❤️ Favorites') {
-    filteredChannels = channels.filter(c => favorites.includes(c.url));
-  } else {
-    filteredChannels = channels.filter(c => normalizeGroup(c.group) === group);
-  }
-  renderChannels();
-  document.getElementById('channelGrid').scrollTop = 0;
+grouped[channel.group].push(channel);
+});
+
+Object.keys(grouped)
+.forEach(group=>{
+
+const section =
+document.createElement("div");
+
+section.className =
+"section";
+
+section.innerHTML =
+`
+<div class="section-title">
+${group}
+</div>
+<div class="channel-row">
+${grouped[group].map(ch=>`
+<div class="channel-card"
+onclick="playChannel('${ch.url}','${ch.name}')">
+
+<img src="${ch.logo}"
+onerror="this.src='https://via.placeholder.com/150'">
+
+<div class="channel-info">
+<div class="channel-name">
+${ch.name}
+</div>
+
+<div class="group-name">
+${ch.group}
+</div>
+</div>
+
+</div>
+`).join("")}
+</div>
+`;
+
+categoriesDiv.appendChild(section);
+});
 }
 
-function renderChannels() {
-  const grid = document.getElementById('channelGrid');
-  grid.innerHTML = '';
+function playChannel(url,name){
 
-  filteredChannels.forEach((ch) => {
-    const div = document.createElement('div');
-    div.className = 'channel';
-    const isFav = favorites.includes(ch.url);
-    div.innerHTML = `
-      <div class="fav-btn">${isFav ? '❤️' : '🤍'}</div>
-      <img src="${ch.logo}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22%3E%3Crect fill=%22%23222%22 width=%2260%22 height=%2260%22/%3E%3C/svg%3E'">
-      <div class="channel-name">${ch.name}</div>
-    `;
-    div.addEventListener('click', () => playChannel(channels.indexOf(ch)));
-    div.querySelector('.fav-btn').addEventListener('click', e => {
-      e.stopPropagation();
-      if (favorites.includes(ch.url)) {
-        favorites = favorites.filter(x => x !== ch.url);
-      } else {
-        favorites.push(ch.url);
-      }
-      localStorage.setItem('norrisfavorites', JSON.stringify(favorites));
-      if (currentGroup === '❤️ Favorites') {
-        filteredChannels = channels.filter(c => favorites.includes(c.url));
-      }
-      renderChannels();
-    });
-    grid.appendChild(div);
-  });
+if(Hls.isSupported()){
 
-  // Contact footer
-  const contact = document.createElement('div');
-  contact.style.gridColumn = '1/-1';
-  contact.innerHTML = `
-    <div class="footer">© 2026 <span>NORRIS TV</span></div>
-  `;
-  grid.appendChild(contact);
+const hls =
+new Hls();
 
-  fixGridHeight();
+hls.loadSource(url);
+hls.attachMedia(video);
+
+}else{
+video.src=url;
 }
 
-/* PLAY */
-function playChannel(index) {
-  currentIndex = index;
-  const video = document.getElementById('video');
-  const channel = channels[index];
-  if (!channel) return;
+nowPlaying.innerText =
+"Now Playing: " + name;
 
-  // Destroy old HLS
-  if (activeHls) { activeHls.destroy(); activeHls = null; }
-
-  if (Hls.isSupported()) {
-    const hls = new Hls({ enableWorker: true });
-    hls.loadSource(channel.url);
-    hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(()=>{}));
-    activeHls = hls;
-  } else {
-    video.src = channel.url;
-    video.play().catch(()=>{});
-  }
-
-  // Update active card highlight
-  document.querySelectorAll('.channel').forEach((el, i) => {
-    el.classList.remove('active');
-    if (filteredChannels[i] && filteredChannels[i].url === channel.url) {
-      el.classList.add('active');
-      // Scroll card into view within the grid
-      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  });
-
-  // Update view count
-  const totalViews = document.getElementById('totalViews');
-  totalViews.textContent = parseInt(totalViews.textContent || '0') + 1;
+video.play();
 }
 
-function nextChannel() {
-  currentIndex++;
-  if (currentIndex >= channels.length) currentIndex = 0;
-  playChannel(currentIndex);
-}
+searchInput
+.addEventListener("input",()=>{
 
-function prevChannel() {
-  currentIndex--;
-  if (currentIndex < 0) currentIndex = channels.length - 1;
-  playChannel(currentIndex);
-}
+const value =
+searchInput.value
+.toLowerCase();
 
-function togglePlay() {
-  const video = document.getElementById('video');
-  video.paused ? video.play() : video.pause();
-}
+const filtered =
+channels.filter(c=>
+c.name.toLowerCase()
+.includes(value)
+);
 
-function searchChannels() {
-  const val = document.getElementById('search').value.toLowerCase();
-  filteredChannels = val
-    ? channels.filter(c => c.name.toLowerCase().includes(val) || c.group.toLowerCase().includes(val))
-    : channels;
-  renderChannels();
-}
+renderCategories(filtered);
 
-/* AUTO-HIDE controls */
-const controls = document.getElementById('customControls');
-const visitor = document.querySelector('.live-counter');
-function showUI() {
-  controls.style.opacity = '1';
-  visitor.style.opacity = '1';
-  clearTimeout(showUI._t);
-  showUI._t = setTimeout(() => {
-    controls.style.opacity = '0';
-    visitor.style.opacity = '0';
-  }, 2500);
-}
-showUI();
-document.querySelector('.player-box').addEventListener('click', showUI);
+});
 </script>
 
 </body>
