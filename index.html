@@ -322,15 +322,27 @@ function playChannel(url,name){
 
 if(Hls.isSupported()){
 
-const hls =
-new Hls();
+if(window.currentHls){
+window.currentHls.destroy();
+}
+
+const hls = new Hls();
+
+window.currentHls = hls;
 
 hls.loadSource(url);
 hls.attachMedia(video);
 
+hls.on(
+Hls.Events.MANIFEST_PARSED,
+function(){
+video.play();
+});
+
 }else{
 
-video.src=url;
+video.src = url;
+video.play();
 
 }
 
