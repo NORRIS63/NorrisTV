@@ -254,8 +254,7 @@ grouped[channel.group].push(channel);
 
 });
 
-Object.keys(grouped)
-.forEach(group=>{
+Object.keys(grouped).forEach(group=>{
 
 const section =
 document.createElement("div");
@@ -277,8 +276,7 @@ document.createElement("div");
 row.className =
 "channel-row";
 
-grouped[group]
-.forEach(ch=>{
+grouped[group].forEach(ch=>{
 
 const card =
 document.createElement("div");
@@ -314,8 +312,7 @@ row.appendChild(card);
 section.appendChild(title);
 section.appendChild(row);
 
-categoriesDiv
-.appendChild(section);
+categoriesDiv.appendChild(section);
 
 });
 
