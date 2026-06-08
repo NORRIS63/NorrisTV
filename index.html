@@ -475,7 +475,6 @@ fetch(PLAYLIST)
     filtered = channels;
     renderGrid();
     if (channels.length) playCh(0);
-    measurePlayer();
   })
   .catch(() => {
     document.getElementById('grid').innerHTML =
