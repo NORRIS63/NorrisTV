@@ -254,6 +254,73 @@ grouped[channel.group].push(channel);
 
 });
 
+Object.keys(grouped)
+.forEach(group=>{
+
+const section =
+document.createElement("div");
+
+section.className =
+"section";
+
+const title =
+document.createElement("div");
+
+title.className =
+"section-title";
+
+title.innerText = group;
+
+const row =
+document.createElement("div");
+
+row.className =
+"channel-row";
+
+grouped[group]
+.forEach(ch=>{
+
+const card =
+document.createElement("div");
+
+card.className =
+"channel-card";
+
+card.innerHTML = `
+<img src="${ch.logo}"
+onerror="this.src='https://via.placeholder.com/150'">
+
+<div class="channel-info">
+<div class="channel-name">
+${ch.name}
+</div>
+
+<div class="group-name">
+${ch.group}
+</div>
+</div>
+`;
+
+card.addEventListener("click",()=>{
+
+playChannel(ch.url,ch.name);
+
+});
+
+row.appendChild(card);
+
+});
+
+section.appendChild(title);
+section.appendChild(row);
+
+categoriesDiv
+.appendChild(section);
+
+});
+
+}
+
 function playChannel(url,name){
 
 if(Hls.isSupported()){
@@ -265,13 +332,16 @@ hls.loadSource(url);
 hls.attachMedia(video);
 
 }else{
+
 video.src=url;
+
 }
 
 nowPlaying.innerText =
 "Now Playing: " + name;
 
 video.play();
+
 }
 
 searchInput
