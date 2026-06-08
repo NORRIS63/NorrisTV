@@ -6,290 +6,218 @@
 <title>Norris TV</title>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 <style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: Arial, sans-serif;
-}
+* { margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
 
-body {
-  background: #141414;
-  color: white;
-  overflow-x: hidden;
-}
+body { background:#141414; color:white; overflow-x:hidden; }
 
-/* Header */
 header {
-  position: sticky;
-  top: 0;
-  z-index: 999;
-  background: linear-gradient(to bottom, #000, rgba(0,0,0,.7));
-  padding: 12px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  position:sticky; top:0; z-index:999;
+  background:linear-gradient(to bottom,#000,rgba(0,0,0,.7));
+  padding:12px 20px; display:flex; justify-content:space-between; align-items:center; gap:10px;
 }
-
-.logo {
-  font-size: 24px;
-  font-weight: bold;
-  color: #e50914;
-}
-
+.logo { font-size:24px; font-weight:bold; color:#e50914; flex-shrink:0; }
+.header-right { display:flex; align-items:center; gap:10px; }
 .search {
-  width: 220px;
-  padding: 8px 14px;
-  border: none;
-  border-radius: 30px;
-  background: #2a2a2a;
-  color: white;
-  outline: none;
-  font-size: 14px;
+  width:200px; padding:8px 14px; border:none; border-radius:30px;
+  background:#2a2a2a; color:white; outline:none; font-size:14px;
 }
 
-/* Layout: sidebar player + scrollable channels */
+/* Load M3U button */
+.load-btn {
+  padding:8px 14px; border-radius:30px; border:1px solid #e50914;
+  background:transparent; color:#e50914; font-size:13px; cursor:pointer;
+  white-space:nowrap; transition:background .2s;
+}
+.load-btn:hover { background:#e50914; color:#fff; }
+#fileInput { display:none; }
+
+/* Layout */
 .main-layout {
-  display: flex;
-  height: calc(100vh - 52px); /* full height minus header */
+  display:flex;
+  min-height:calc(100vh - 52px);
 }
 
-/* Left: sticky player */
+/* Player panel */
 .player-panel {
-  width: 340px;
-  min-width: 280px;
-  flex-shrink: 0;
-  padding: 14px;
-  position: sticky;
-  top: 52px;
-  height: calc(100vh - 52px);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  width:320px; min-width:260px; flex-shrink:0;
+  padding:14px; position:sticky; top:52px;
+  height:calc(100vh - 52px);
+  display:flex; flex-direction:column; gap:10px;
 }
-
 video {
-  width: 100%;
-  aspect-ratio: 16/9;
-  background: #000;
-  border-radius: 12px;
-  object-fit: contain;
+  width:100%; aspect-ratio:16/9; background:#000;
+  border-radius:12px; object-fit:contain; display:none;
 }
-
-.now-playing {
-  font-size: 14px;
-  font-weight: bold;
-  color: #ccc;
-  line-height: 1.4;
-}
-
-.now-playing span {
-  color: #e50914;
-}
-
 .player-placeholder {
-  width: 100%;
-  aspect-ratio: 16/9;
-  background: #1a1a1a;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #444;
-  font-size: 13px;
-  border: 1px dashed #333;
+  width:100%; aspect-ratio:16/9; background:#1a1a1a;
+  border-radius:12px; display:flex; align-items:center; justify-content:center;
+  color:#444; font-size:13px; border:1px dashed #333;
 }
-
-/* Right: scrollable channel list */
-.channels-panel {
-  flex: 1;
-  overflow-y: auto;
-  padding: 14px 14px 14px 0;
-}
-
-.channels-panel::-webkit-scrollbar {
-  width: 4px;
-}
-.channels-panel::-webkit-scrollbar-track {
-  background: transparent;
-}
-.channels-panel::-webkit-scrollbar-thumb {
-  background: #333;
-  border-radius: 4px;
-}
-
-/* Category sections */
-.section {
-  margin-bottom: 24px;
-}
-
-.section-title {
-  font-size: 16px;
-  font-weight: bold;
-  margin-bottom: 10px;
-  color: #fff;
-  padding-left: 4px;
-  border-left: 3px solid #e50914;
-  padding-left: 8px;
-}
-
-/* Channel grid inside each section */
-.channel-row {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 10px;
-}
-
-.channel-card {
-  background: #1e1e1e;
-  border-radius: 10px;
-  overflow: hidden;
-  cursor: pointer;
-  transition: transform .2s, background .2s;
-  border: 1px solid transparent;
-}
-
-.channel-card:hover {
-  transform: scale(1.05);
-  background: #2a2a2a;
-  border-color: #e50914;
-}
-
-.channel-card.active {
-  border-color: #e50914;
-  background: #2a2a2a;
-}
-
-.channel-card img {
-  width: 100%;
-  height: 72px;
-  object-fit: contain;
-  background: #fff;
-  padding: 6px;
-}
-
-.channel-info {
-  padding: 7px 8px;
-}
-
-.channel-name {
-  font-size: 12px;
-  font-weight: bold;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.group-name {
-  font-size: 11px;
-  color: #888;
-  margin-top: 2px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-/* Error badge */
+.now-playing { font-size:13px; font-weight:bold; color:#ccc; line-height:1.5; }
+.now-playing span { color:#e50914; }
 .error-msg {
-  padding: 6px 10px;
-  background: #3a1010;
-  border-radius: 8px;
-  font-size: 12px;
-  color: #e55;
-  display: none;
+  padding:8px 12px; background:#3a1010; border-radius:8px;
+  font-size:12px; color:#e55; display:none; border:1px solid #6a2020;
 }
 
-/* Mobile: stack vertically */
-@media (max-width: 700px) {
-  .main-layout {
-    flex-direction: column;
-    height: auto;
-  }
+/* Empty / loading state */
+.status-msg {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:16px; padding:60px 20px; text-align:center; color:#555;
+}
+.status-msg .icon { font-size:48px; }
+.status-msg p { font-size:14px; line-height:1.6; }
+.status-msg strong { color:#888; }
 
-  .player-panel {
-    width: 100%;
-    position: static;
-    height: auto;
-    padding: 10px;
-  }
+/* Channels panel */
+.channels-panel {
+  flex:1; overflow-y:auto; padding:14px 14px 20px 0;
+}
+.channels-panel::-webkit-scrollbar { width:4px; }
+.channels-panel::-webkit-scrollbar-thumb { background:#333; border-radius:4px; }
 
-  .channels-panel {
-    overflow-y: visible;
-    padding: 0 10px 20px;
-  }
+.section { margin-bottom:24px; }
+.section-title {
+  font-size:15px; font-weight:bold; margin-bottom:10px;
+  padding-left:8px; border-left:3px solid #e50914;
+}
 
-  .search {
-    width: 140px;
-  }
+.channel-row {
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
+  gap:8px;
+}
+.channel-card {
+  background:#1e1e1e; border-radius:10px; overflow:hidden;
+  cursor:pointer; transition:transform .2s, background .2s;
+  border:1px solid transparent;
+}
+.channel-card:hover { transform:scale(1.05); background:#2a2a2a; border-color:#555; }
+.channel-card.active { border-color:#e50914; background:#2a2a2a; }
+.channel-card img {
+  width:100%; height:68px; object-fit:contain;
+  background:#fff; padding:6px; display:block;
+}
+.channel-info { padding:6px 8px; }
+.channel-name {
+  font-size:11px; font-weight:bold;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.group-name {
+  font-size:10px; color:#777; margin-top:2px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
 
-  .channel-row {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
-  }
+/* Mobile */
+@media(max-width:700px){
+  .main-layout { flex-direction:column; min-height:auto; }
+  .player-panel { width:100%; position:static; height:auto; }
+  .channels-panel { overflow-y:visible; padding:0 10px 20px; }
+  .search { width:130px; }
+  .channel-row { grid-template-columns:repeat(auto-fill,minmax(95px,1fr)); }
 }
 </style>
 </head>
-
 <body>
 
 <header>
   <div class="logo">Norris TV</div>
-  <input type="text" class="search" id="search" placeholder="Search channels…">
+  <div class="header-right">
+    <input type="text" class="search" id="search" placeholder="Search channels…">
+    <button class="load-btn" onclick="document.getElementById('fileInput').click()">📂 Load M3U</button>
+    <input type="file" id="fileInput" accept=".m3u,.m3u8">
+  </div>
 </header>
 
 <div class="main-layout">
-
-  <!-- Left: Player -->
   <div class="player-panel">
     <div class="player-placeholder" id="placeholder">▶ Select a channel</div>
-    <video id="video" controls style="display:none"></video>
+    <video id="video" controls></video>
     <div class="now-playing" id="nowPlaying"></div>
     <div class="error-msg" id="errorMsg">⚠ Stream failed to load</div>
   </div>
-
-  <!-- Right: Channels -->
   <div class="channels-panel">
-    <div id="categories"></div>
+    <div id="categories">
+      <div class="status-msg" id="statusMsg">
+        <div class="icon">📡</div>
+        <p>Loading <strong>playlist.m3u</strong>…</p>
+      </div>
+    </div>
   </div>
-
 </div>
 
 <script>
-const playlistURL = "playlist.m3u";
-
 const video         = document.getElementById("video");
 const placeholder   = document.getElementById("placeholder");
 const nowPlaying    = document.getElementById("nowPlaying");
 const categoriesDiv = document.getElementById("categories");
+const statusMsg     = document.getElementById("statusMsg");
 const searchInput   = document.getElementById("search");
 const errorMsg      = document.getElementById("errorMsg");
+const fileInput     = document.getElementById("fileInput");
 
-let channels = [];
+let channels  = [];
 let activeHls = null;
 let activeCard = null;
 
-fetch(playlistURL)
-  .then(res => res.text())
-  .then(data => {
-    parseM3U(data);
-    renderCategories(channels);
+// Try fetching playlist.m3u from the same directory
+fetch("playlist.m3u")
+  .then(res => {
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return res.text();
   })
-  .catch(() => {
-    categoriesDiv.innerHTML = '<p style="color:#666;padding:20px">Could not load playlist.m3u</p>';
+  .then(data => {
+    channels = parseM3U(data);
+    if (channels.length === 0) {
+      showStatus("⚠️", "playlist.m3u was found but contains no channels.");
+    } else {
+      renderCategories(channels);
+    }
+  })
+  .catch(err => {
+    showStatus(
+      "📂",
+      `<strong>playlist.m3u not found</strong> (${err.message})<br><br>
+       Make sure <code>playlist.m3u</code> is committed to your GitHub repo<br>
+       in the same folder as <code>index.html</code>.<br><br>
+       Or use <strong>Load M3U</strong> above to open it manually.`
+    );
   });
 
+// Manual file load
+fileInput.addEventListener("change", e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    channels = parseM3U(ev.target.result);
+    if (channels.length === 0) {
+      showStatus("⚠️", "File loaded but no channels were found.");
+    } else {
+      renderCategories(channels);
+    }
+  };
+  reader.readAsText(file);
+});
+
+function showStatus(icon, msg) {
+  statusMsg.style.display = "flex";
+  statusMsg.querySelector(".icon").textContent = icon;
+  statusMsg.querySelector("p").innerHTML = msg;
+}
+
 function parseM3U(data) {
-  const lines = data.split("\n");
+  const result = [];
+  const lines  = data.split("\n");
   for (let i = 0; i < lines.length; i++) {
     if (lines[i].startsWith("#EXTINF")) {
       const info = lines[i];
       const url  = lines[i + 1]?.trim();
       if (!url || url.startsWith("#")) continue;
-
       const name  = info.split(",").pop().trim();
       const logo  = info.match(/tvg-logo="(.*?)"/);
       const group = info.match(/group-title="(.*?)"/);
-
-      channels.push({
+      result.push({
         name,
         url,
         logo:  logo  ? logo[1]  : "",
@@ -297,13 +225,14 @@ function parseM3U(data) {
       });
     }
   }
+  return result;
 }
 
 function renderCategories(list) {
   categoriesDiv.innerHTML = "";
 
   if (list.length === 0) {
-    categoriesDiv.innerHTML = '<p style="color:#555;padding:10px">No channels found</p>';
+    showStatus("🔍", "No channels match your search.");
     return;
   }
 
@@ -319,7 +248,7 @@ function renderCategories(list) {
 
     const title = document.createElement("div");
     title.className = "section-title";
-    title.textContent = group;
+    title.textContent = `${group} (${grouped[group].length})`;
     section.appendChild(title);
 
     const row = document.createElement("div");
@@ -328,13 +257,12 @@ function renderCategories(list) {
     grouped[group].forEach(ch => {
       const card = document.createElement("div");
       card.className = "channel-card";
-      card.dataset.url  = ch.url;
-      card.dataset.name = ch.name;
 
+      const FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='110' height='68'%3E%3Crect fill='%23222' width='110' height='68'/%3E%3Ctext fill='%23555' font-size='10' x='55' y='38' text-anchor='middle'%3ENo Logo%3C/text%3E%3C/svg%3E";
       const img = document.createElement("img");
-      img.src   = ch.logo || "";
-      img.alt   = ch.name;
-      img.onerror = () => { img.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='72'%3E%3Crect fill='%23222' width='100' height='72'/%3E%3Ctext fill='%23555' font-size='11' x='50' y='40' text-anchor='middle'%3ENo Logo%3C/text%3E%3C/svg%3E"; };
+      img.src = ch.logo || FALLBACK;
+      img.alt = ch.name;
+      img.onerror = () => { img.src = FALLBACK; };
 
       const info = document.createElement("div");
       info.className = "channel-info";
@@ -352,57 +280,41 @@ function renderCategories(list) {
 }
 
 function playChannel(url, name, card) {
-  // Update active card highlight
   if (activeCard) activeCard.classList.remove("active");
   activeCard = card;
-  if (card) card.classList.add("active");
+  card.classList.add("active");
 
-  // Show video, hide placeholder
   placeholder.style.display = "none";
   video.style.display = "block";
   errorMsg.style.display = "none";
 
-  // Destroy previous HLS instance
-  if (activeHls) {
-    activeHls.destroy();
-    activeHls = null;
-  }
+  if (activeHls) { activeHls.destroy(); activeHls = null; }
 
   if (Hls.isSupported()) {
     const hls = new Hls({ enableWorker: true });
     hls.loadSource(url);
     hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
-    hls.on(Hls.Events.ERROR, (_, data) => {
-      if (data.fatal) {
-        errorMsg.style.display = "block";
-      }
-    });
+    hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+    hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) errorMsg.style.display = "block"; });
     activeHls = hls;
-  } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
-    video.src = url;
-    video.play();
   } else {
     video.src = url;
-    video.play();
+    video.play().catch(() => {});
   }
 
   nowPlaying.innerHTML = `<span>▶ Now Playing</span><br>${name}`;
 
-  // Scroll player into view on mobile
   if (window.innerWidth <= 700) {
-    document.querySelector(".player-panel").scrollIntoView({ behavior: "smooth" });
+    document.querySelector(".player-panel").scrollIntoView({ behavior:"smooth" });
   }
 }
 
 searchInput.addEventListener("input", () => {
   const val = searchInput.value.toLowerCase().trim();
-  const filtered = val
-    ? channels.filter(c => c.name.toLowerCase().includes(val) || c.group.toLowerCase().includes(val))
-    : channels;
-  renderCategories(filtered);
+  renderCategories(val ? channels.filter(c =>
+    c.name.toLowerCase().includes(val) || c.group.toLowerCase().includes(val)
+  ) : channels);
 });
 </script>
-
 </body>
 </html>
