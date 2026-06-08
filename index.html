@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0a0a">
+<title>Norris TV</title>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.13/dist/hls.min.js"></script>
+<!-- Firebase Realtime DB (compat, tiny) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   TOKENS
+═══════════════════════════════════════════ */
+:root {
+  --r: #e50914;          /* Netflix red       */
+  --r2: #b20710;         /* red dark          */
+  --bg: #0a0a0a;
+  --s1: #141414;         /* card bg           */
+  --s2: #1f1f1f;         /* input/badge bg    */
+  --s3: #2a2a2a;         /* hover surface     */
+  --ln: rgba(255,255,255,.07); /* line/border  */
+  --tx: #e5e5e5;
+  --mu: #808080;
+  --gr: #46d369;         /* green / active    */
+  --rad: 8px;
+}
+
+/* ═══════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════ */
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{-webkit-tap-highlight-color:transparent}
+body{
+  background:var(--bg);
+  color:var(--tx);
+  font-family:system-ui,-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;
+  font-size:14px;
+  line-height:1.4;
+  overflow-x:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;cursor:pointer}
+img{display:block}
+
+/* ═══════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════ */
+#header{
+  position:sticky;top:0;z-index:600;
+  background:var(--bg);
+  border-bottom:1px solid var(--ln);
+  height:52px;
+  display:flex;align-items:center;
+  justify-content:space-between;
+  padding:0 14px;
+  gap:10px;
+}
+
+/* Logo */
+.logo{
+  display:flex;align-items:center;gap:7px;
+  font-size:20px;font-weight:800;letter-spacing:-.4px;
+  flex-shrink:0;text-decoration:none;color:var(--tx);
+}
+.logo-n{color:var(--r)}
+.logo-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--r);
+  animation:blink 2.4s ease-in-out infinite;
+}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* Live users pill */
+.users-pill{
+  display:flex;align-items:center;gap:5px;
+  background:var(--s2);border-radius:20px;
+  padding:4px 10px;font-size:11px;font-weight:600;
+  color:var(--mu);white-space:nowrap;
+}
+.users-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--gr);
+  animation:pulse 2s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.7)}}
+#liveCount{color:var(--tx)}
+
+/* Search */
+.search-wrap{position:relative;flex:1;max-width:220px}
+.search-wrap svg{
+  position:absolute;left:9px;top:50%;transform:translateY(-50%);
+  width:14px;height:14px;fill:none;stroke:var(--mu);stroke-width:2;
+  stroke-linecap:round;stroke-linejoin:round;pointer-events:none;
+}
+#search{
+  width:100%;padding:7px 10px 7px 30px;
+  background:var(--s2);border:1px solid var(--ln);
+  border-radius:var(--rad);color:var(--tx);font-size:13px;
+  outline:none;transition:border-color .15s;
+  -webkit-appearance:none;
+}
+#search:focus{border-color:rgba(229,9,20,.5)}
+#search::placeholder{color:var(--mu)}
+
+/* ═══════════════════════════════════════════
+   PLAYER
+═══════════════════════════════════════════ */
+#playerWrap{
+  position:sticky;top:52px;z-index:500;
+  background:#000;
+}
+#video{
+  width:100%;display:block;
+  background:#000;
+  /* 16:9 on mobile, capped on desktop */
+  aspect-ratio:16/9;
+  max-height:340px;
+  object-fit:contain;
+}
+/* Info bar below video */
+#infoBar{
+  background:var(--s1);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 12px;gap:8px;
+  border-bottom:1px solid var(--ln);
+}
+.info-left{display:flex;flex-direction:column;gap:2px;overflow:hidden}
+.live-chip{
+  display:inline-flex;align-items:center;gap:4px;
+  background:var(--r);color:#fff;
+  font-size:9px;font-weight:700;letter-spacing:1.5px;
+  padding:2px 6px;border-radius:3px;align-self:flex-start;
+}
+.live-dot-sm{width:5px;height:5px;border-radius:50%;background:#fff;
+  animation:blink 1.2s ease-in-out infinite}
+#npName{
+  font-size:15px;font-weight:700;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  max-width:calc(100vw - 130px);
+}
+/* Player controls */
+.ctrl-row{display:flex;gap:6px;flex-shrink:0}
+.ctrl-btn{
+  width:32px;height:32px;border-radius:50%;
+  border:1px solid var(--ln);background:var(--s2);
+  color:var(--tx);display:flex;align-items:center;justify-content:center;
+  transition:background .15s,border-color .15s;
+  flex-shrink:0;
+}
+.ctrl-btn:active{background:var(--r);border-color:var(--r)}
+.ctrl-btn svg{width:13px;height:13px;fill:currentColor;pointer-events:none}
+
+/* ═══════════════════════════════════════════
+   CATEGORY TABS
+═══════════════════════════════════════════ */
+#tabsBar{
+  position:sticky;top:calc(52px + var(--ph, 0px));z-index:400;
+  background:var(--bg);border-bottom:1px solid var(--ln);
+  overflow-x:auto;overflow-y:hidden;
+  scrollbar-width:none;-webkit-overflow-scrolling:touch;
+}
+#tabsBar::-webkit-scrollbar{display:none}
+#tabsInner{
+  display:flex;padding:0 10px;
+  min-width:max-content;
+}
+.t-btn{
+  background:none;border:none;color:var(--mu);
+  font-size:13px;font-weight:500;
+  padding:11px 12px;
+  position:relative;white-space:nowrap;
+  transition:color .15s;
+}
+.t-btn::after{
+  content:'';position:absolute;bottom:0;
+  left:50%;right:50%;height:2px;
+  background:var(--r);border-radius:2px 2px 0 0;
+  transition:left .15s,right .15s;
+}
+.t-btn.on{color:var(--tx)}
+.t-btn.on::after{left:12px;right:12px}
+.t-btn:hover:not(.on){color:#ccc}
+.cnt{
+  background:var(--s2);color:var(--mu);
+  font-size:10px;font-weight:700;
+  padding:1px 5px;border-radius:10px;margin-left:4px;
+}
+
+/* ═══════════════════════════════════════════
+   CHANNEL GRID
+═══════════════════════════════════════════ */
+#gridWrap{padding:12px 10px 60px}
+.grid-label{
+  font-size:10px;font-weight:700;
+  letter-spacing:1.5px;text-transform:uppercase;
+  color:var(--mu);margin-bottom:10px;padding-left:2px;
+}
+#grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:9px;
+}
+
+/* ═══════════════════════════════════════════
+   CHANNEL CARD
+═══════════════════════════════════════════ */
+.card{
+  position:relative;background:var(--s1);
+  border-radius:var(--rad);overflow:hidden;
+  border:1px solid var(--ln);
+  cursor:pointer;
+  /* GPU-friendly transform only, no box-shadow on hover */
+  transition:transform .15s,border-color .15s;
+  -webkit-tap-highlight-color:transparent;
+}
+.card:active{transform:scale(.97)}
+.card.on{
+  border-color:var(--gr);
+  /* subtle ring without expensive box-shadow repaint */
+  outline:1px solid var(--gr);
+}
+
+/* Logo area – white background, 16:9 */
+.card-img{
+  background:#fff;aspect-ratio:16/9;
+  display:flex;align-items:center;justify-content:center;
+  overflow:hidden;position:relative;
+}
+.card-img img{
+  width:100%;height:100%;object-fit:contain;
+  padding:6px;
+}
+/* fallback when no logo */
+.card-img .fallback{
+  font-size:10px;font-weight:700;color:#555;
+  text-align:center;padding:4px;word-break:break-word;
+  display:none;
+}
+
+/* EQ bars (active channel only) */
+.eq{
+  display:none;position:absolute;
+  bottom:4px;left:4px;
+  gap:2px;align-items:flex-end;height:10px;
+}
+.card.on .eq{display:flex}
+.eq i{width:3px;background:var(--gr);border-radius:1px;
+  animation:eq .65s ease-in-out infinite alternate}
+.eq i:nth-child(1){height:4px;animation-delay:0s}
+.eq i:nth-child(2){height:7px;animation-delay:.13s}
+.eq i:nth-child(3){height:10px;animation-delay:.26s}
+@keyframes eq{from{transform:scaleY(.3)}to{transform:scaleY(1)}}
+
+/* Fav button */
+.fav{
+  position:absolute;top:4px;right:4px;
+  width:20px;height:20px;
+  background:rgba(0,0,0,.65);border:none;border-radius:50%;
+  font-size:9px;z-index:5;
+  display:flex;align-items:center;justify-content:center;
+}
+
+/* Channel name */
+.card-name{
+  padding:5px 6px 6px;
+  font-size:10.5px;font-weight:500;
+  text-align:center;line-height:1.25;
+  min-height:30px;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--tx);
+}
+
+/* ═══════════════════════════════════════════
+   EMPTY / ERROR
+═══════════════════════════════════════════ */
+.empty{
+  grid-column:1/-1;text-align:center;
+  padding:48px 0;color:var(--mu);font-size:13px;
+}
+.empty svg{
+  width:32px;height:32px;margin:0 auto 10px;
+  fill:none;stroke:var(--mu);stroke-width:1.5;
+  stroke-linecap:round;stroke-linejoin:round;opacity:.4;
+}
+
+/* ═══════════════════════════════════════════
+   FOOTER
+═══════════════════════════════════════════ */
+#footer{
+  text-align:center;padding:16px;
+  font-size:11px;color:var(--mu);
+  border-top:1px solid var(--ln);
+}
+
+/* ═══════════════════════════════════════════
+   DESKTOP UPGRADES  ≥ 640px
+═══════════════════════════════════════════ */
+@media(min-width:640px){
+  #video{max-height:420px}
+  #grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px}
+  #gridWrap{padding:16px 16px 80px}
+  .card-name{font-size:11.5px;padding:6px 8px 7px;min-height:34px}
+  .ctrl-btn:hover{background:var(--r);border-color:var(--r)}
+}
+@media(min-width:1024px){
+  #video{max-height:520px}
+  #grid{grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:14px}
+  #gridWrap{padding:20px 24px 100px;max-width:1600px;margin:0 auto}
+  #header{padding:0 24px}
+  #tabsInner{padding:0 20px}
+  .logo{font-size:22px}
+  .search-wrap{max-width:260px}
+}
+
+/* ═══════════════════════════════════════════
+   SAFE-AREA (notch phones)
+═══════════════════════════════════════════ */
+@supports(padding:env(safe-area-inset-left)){
+  #header{padding-left:max(14px,env(safe-area-inset-left));padding-right:max(14px,env(safe-area-inset-right))}
+  #footer{padding-bottom:max(16px,env(safe-area-inset-bottom))}
+}
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header id="header">
+  <a class="logo" href="#" aria-label="Norris TV"><span class="logo-dot" aria-hidden="true"></span><span class="logo-n">N</span>orris<span class="logo-n">TV</span></a>
+
+  <div class="users-pill" title="Live viewers">
+    <span class="users-dot" aria-hidden="true"></span>
+    <span id="liveCount">—</span>
+    <span>watching</span>
+  </div>
+
+  <div class="search-wrap">
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+    </svg>
+    <input type="search" id="search" placeholder="Search channels…" autocomplete="off" spellcheck="false" oninput="onSearch()">
+  </div>
+</header>
+
+<!-- ═══ PLAYER ═══ -->
+<div id="playerWrap">
+  <video id="video" autoplay playsinline controls></video>
+  <div id="infoBar">
+    <div class="info-left">
+      <span class="live-chip"><span class="live-dot-sm" aria-hidden="true"></span>LIVE</span>
+      <div id="npName">Select a channel</div>
+    </div>
+    <div class="ctrl-row" role="group" aria-label="Player controls">
+      <button class="ctrl-btn" onclick="prevCh()" aria-label="Previous channel">
+        <svg viewBox="0 0 24 24"><path d="M19 20L9 12l10-8v16zM5 4h2v16H5z"/></svg>
+      </button>
+      <button class="ctrl-btn" onclick="togglePlay()" id="playBtn" aria-label="Play/Pause">
+        <svg id="playIcon" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+      </button>
+      <button class="ctrl-btn" onclick="nextCh()" aria-label="Next channel">
+        <svg viewBox="0 0 24 24"><path d="M5 4l10 8-10 8V4zm14 0h-2v16h2V4z"/></svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ TABS ═══ -->
+<nav id="tabsBar" aria-label="Channel categories">
+  <div id="tabsInner"></div>
+</nav>
+
+<!-- ═══ GRID ═══ -->
+<section id="gridWrap">
+  <div class="grid-label" id="gridLabel">All Channels</div>
+  <div id="grid" role="list">
+    <div class="empty">
+      <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
+      Loading playlist…
+    </div>
+  </div>
+</section>
+
+<footer id="footer">© 2026 Norris TV</footer>
+
+<!-- ═══════════════════════════════════════════
+     SCRIPTS
+═══════════════════════════════════════════ -->
+<script>
+'use strict';
+
+/* ─── CONFIG ─────────────────────────────────── */
+const PLAYLIST = 'https://raw.githubusercontent.com/NORRIS63/NorrisTV/refs/heads/main/playlist.m3u';
+
+// ⚠️  Replace with your own Firebase project config
+const FB_CONFIG = {
+  apiKey:            "REPLACE_API_KEY",
+  authDomain:        "REPLACE.firebaseapp.com",
+  databaseURL:       "https://REPLACE-default-rtdb.firebaseio.com",
+  projectId:         "REPLACE",
+  storageBucket:     "REPLACE.appspot.com",
+  messagingSenderId: "REPLACE",
+  appId:             "REPLACE"
+};
+
+const GROUPS = ['All','❤️ Favorites','Bangla','Sports','News','Movies','Kids','Music','English','Others'];
+
+/* ─── STATE ──────────────────────────────────── */
+let channels       = [];
+let filtered       = [];
+let currentIdx     = -1;
+let currentGroup   = 'All';
+let favorites      = JSON.parse(localStorage.getItem('ntv_favs') || '[]');
+let hlsInst        = null;
+let playerHeight   = 0;
+
+/* ─── FIREBASE – LIVE USERS ──────────────────── */
+(function initFirebase() {
+  try {
+    firebase.initializeApp(FB_CONFIG);
+    const db    = firebase.database();
+    const uid   = Math.random().toString(36).slice(2);
+    const ref   = db.ref('liveUsers/' + uid);
+
+    // write presence
+    ref.set(true);
+    ref.onDisconnect().remove();
+
+    // count all viewers
+    db.ref('liveUsers').on('value', snap => {
+      const n = snap.numChildren();
+      document.getElementById('liveCount').textContent = n;
+    });
+  } catch(e) {
+    // Firebase not configured – silently hide the pill
+    const pill = document.querySelector('.users-pill');
+    if (pill) pill.style.display = 'none';
+  }
+})();
+
+/* ─── GROUP NORMALISER ───────────────────────── */
+function normGroup(g) {
+  g = (g || '').toLowerCase();
+  if (g.includes('sport'))   return 'Sports';
+  if (g.includes('news'))    return 'News';
+  if (g.includes('movie'))   return 'Movies';
+  if (g.includes('kid'))     return 'Kids';
+  if (g.includes('music'))   return 'Music';
+  if (g.includes('bangla'))  return 'Bangla';
+  if (g.includes('english')) return 'English';
+  return 'Others';
+}
+
+/* ─── LOAD PLAYLIST ──────────────────────────── */
+fetch(PLAYLIST)
+  .then(r => r.text())
+  .then(raw => {
+    const lines = raw.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (!line.startsWith('#EXTINF')) continue;
+      const url = (lines[i + 1] || '').trim();
+      if (!url || url.startsWith('#')) continue;
+      channels.push({
+        name:  (line.split(',')[1] || 'Unknown').trim(),
+        url,
+        logo:  (line.match(/tvg-logo="([^"]*)"/)  || ['',''])[1],
+        group: (line.match(/group-title="([^"]*)"/i) || ['',''])[1]
+      });
+    }
+    buildTabs();
+    filtered = channels;
+    renderGrid();
+    if (channels.length) playCh(0);
+    measurePlayer();
+  })
+  .catch(() => {
+    document.getElementById('grid').innerHTML =
+      '<div class="empty"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>Could not load playlist</div>';
+  });
+
+/* ─── MEASURE PLAYER HEIGHT for sticky tabs ─── */
+function measurePlayer() {
+  const h = document.getElementById('playerWrap').offsetHeight;
+  document.documentElement.style.setProperty('--ph', h - (52) + 'px');
+}
+window.addEventListener('resize', measurePlayer);
+
+/* ─── BUILD TABS ─────────────────────────────── */
+function buildTabs() {
+  const counts = { All: channels.length, '❤️ Favorites': favorites.length };
+  GROUPS.slice(2).forEach(g => {
+    counts[g] = channels.filter(c => normGroup(c.group) === g).length;
+  });
+
+  document.getElementById('tabsInner').innerHTML = GROUPS.map((g, i) =>
+    `<button class="t-btn${i === 0 ? ' on' : ''}" onclick="setGroup(${JSON.stringify(g)},this)">${g}<span class="cnt">${counts[g] || 0}</span></button>`
+  ).join('');
+}
+
+/* ─── SET GROUP / FILTER ─────────────────────── */
+function setGroup(group, btn) {
+  currentGroup = group;
+  document.querySelectorAll('.t-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  document.getElementById('gridLabel').textContent = group === 'All' ? 'All Channels' : group;
+  applyFilter();
+}
+
+function applyFilter(q) {
+  q = q !== undefined ? q : document.getElementById('search').value.toLowerCase().trim();
+
+  let base;
+  if (currentGroup === 'All') base = channels;
+  else if (currentGroup === '❤️ Favorites') base = channels.filter(c => favorites.includes(c.url));
+  else base = channels.filter(c => normGroup(c.group) === currentGroup);
+
+  filtered = q ? base.filter(c => c.name.toLowerCase().includes(q)) : base;
+  renderGrid();
+}
+
+function onSearch() {
+  applyFilter(document.getElementById('search').value.toLowerCase().trim());
+}
+
+/* ─── RENDER GRID ────────────────────────────── */
+function renderGrid() {
+  const grid = document.getElementById('grid');
+  if (!filtered.length) {
+    grid.innerHTML = '<div class="empty"><svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>No channels found</div>';
+    return;
+  }
+
+  const activeCh = channels[currentIdx];
+  grid.innerHTML = filtered.map(ch => {
+    const isOn  = activeCh && activeCh.url === ch.url;
+    const isFav = favorites.includes(ch.url);
+    const idx   = channels.indexOf(ch);
+    // Escape for inline onclick
+    const safeUrl = ch.url.replace(/'/g, "\\'");
+    return `<div class="card${isOn ? ' on' : ''}" role="listitem" data-url="${ch.url}" onclick="playCh(${idx})" tabindex="0">
+  <div class="card-img">
+    <div class="eq" aria-hidden="true"><i></i><i></i><i></i></div>
+    <button class="fav" onclick="event.stopPropagation();toggleFav('${safeUrl}')" aria-label="${isFav ? 'Remove from favorites' : 'Add to favorites'}">${isFav ? '❤️' : '🤍'}</button>
+    <img src="${ch.logo}" alt="${ch.name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+    <div class="fallback">${ch.name}</div>
+  </div>
+  <div class="card-name">${ch.name}</div>
+</div>`;
+  }).join('');
+}
+
+/* ─── TOGGLE FAVORITE ───────────────────────── */
+function toggleFav(url) {
+  favorites = favorites.includes(url)
+    ? favorites.filter(x => x !== url)
+    : [...favorites, url];
+  localStorage.setItem('ntv_favs', JSON.stringify(favorites));
+  buildTabs();
+  applyFilter();
+}
+
+/* ─── PLAY CHANNEL ───────────────────────────── */
+const playPaths = {
+  play:  'M8 5v14l11-7z',
+  pause: 'M6 19h4V5H6v14zm8-14v14h4V5h-4z'
+};
+
+function setPlayIcon(playing) {
+  document.getElementById('playIcon').querySelector('path').setAttribute('d', playPaths[playing ? 'pause' : 'play']);
+}
+
+function playCh(index) {
+  const ch = channels[index];
+  if (!ch) return;
+  currentIdx = index;
+
+  // Update now-playing info
+  document.getElementById('npName').textContent = ch.name;
+  setPlayIcon(true);
+
+  // Destroy old HLS
+  if (hlsInst) { try { hlsInst.destroy(); } catch(_){} hlsInst = null; }
+
+  const video = document.getElementById('video');
+
+  if (Hls.isSupported()) {
+    hlsInst = new Hls({ enableWorker: false, lowLatencyMode: true });
+    hlsInst.loadSource(ch.url);
+    hlsInst.attachMedia(video);
+    hlsInst.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
+    hlsInst.on(Hls.Events.ERROR, (_, d) => {
+      if (d.fatal) { setPlayIcon(false); }
+    });
+  } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+    video.src = ch.url;
+    video.play().catch(() => {});
+  } else {
+    video.src = ch.url;
+    video.play().catch(() => {});
+  }
+
+  // Update active card
+  document.querySelectorAll('.card').forEach(c => {
+    c.classList.toggle('on', c.dataset.url === ch.url);
+  });
+}
+
+/* ─── PLAYER CONTROLS ───────────────────────── */
+function nextCh() { playCh((currentIdx + 1) % channels.length); }
+function prevCh() { playCh((currentIdx - 1 + channels.length) % channels.length); }
+
+function togglePlay() {
+  const v = document.getElementById('video');
+  if (v.paused) { v.play(); setPlayIcon(true); }
+  else          { v.pause(); setPlayIcon(false); }
+}
+
+// Sync icon with native controls
+document.getElementById('video').addEventListener('play',  () => setPlayIcon(true));
+document.getElementById('video').addEventListener('pause', () => setPlayIcon(false));
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if (e.target === document.getElementById('search')) return;
+  if (e.key === 'ArrowRight') nextCh();
+  if (e.key === 'ArrowLeft')  prevCh();
+  if (e.key === ' ')          { e.preventDefault(); togglePlay(); }
+});
+</script>
+</body>
+</html>
