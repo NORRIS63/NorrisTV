@@ -5,316 +5,351 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Norris TV</title>
 <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"/>
 <style>
-* { margin:0; padding:0; box-sizing:border-box; font-family:Arial,sans-serif; }
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
 
-body { background:#141414; color:white; overflow-x:hidden; }
+body{background:#000;color:white;overflow:hidden;height:100vh;}
 
-header {
-  position:sticky; top:0; z-index:999;
-  background:linear-gradient(to bottom,#000,rgba(0,0,0,.7));
-  padding:12px 20px; display:flex; justify-content:space-between; align-items:center; gap:10px;
-}
-.logo { font-size:24px; font-weight:bold; color:#e50914; flex-shrink:0; }
-.header-right { display:flex; align-items:center; gap:10px; }
-.search {
-  width:200px; padding:8px 14px; border:none; border-radius:30px;
-  background:#2a2a2a; color:white; outline:none; font-size:14px;
-}
+/* HEADER */
+.header{position:sticky;top:0;z-index:10000;background:#000;padding:2px;text-align:center;border-top:1px solid red;border-bottom:1px solid red;}
+.header h1{font-size:24px;color:#ff1a1a;text-shadow:0 0 15px red;}
+.header-inner{position:relative;width:100%;height:36px;}
+.header h1{text-align:center;line-height:36px;margin:0;}
 
-/* Load M3U button */
-.load-btn {
-  padding:8px 14px; border-radius:30px; border:1px solid #e50914;
-  background:transparent; color:#e50914; font-size:13px; cursor:pointer;
-  white-space:nowrap; transition:background .2s;
-}
-.load-btn:hover { background:#e50914; color:#fff; }
-#fileInput { display:none; }
+/* PLAYER */
+.player-box{position:relative;width:100%;background:black;}
+video{width:100%;height:250px;background:black;object-fit:fill;}
 
-/* Layout */
-.main-layout {
-  display:flex;
-  min-height:calc(100vh - 52px);
-}
+/* CONTROLS */
+.custom-controls{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;gap:15px;z-index:999;transition:.4s;}
+.control-btn{width:58px;height:58px;border:none;border-radius:50%;background:red;color:white;font-size:22px;display:flex;justify-content:center;align-items:center;cursor:pointer;box-shadow:0 0 15px rgba(255,0,0,.6);}
 
-/* Player panel */
-.player-panel {
-  width:320px; min-width:260px; flex-shrink:0;
-  padding:14px; position:sticky; top:52px;
-  height:calc(100vh - 52px);
-  display:flex; flex-direction:column; gap:10px;
-}
-video {
-  width:100%; aspect-ratio:16/9; background:#000;
-  border-radius:12px; object-fit:contain; display:none;
-}
-.player-placeholder {
-  width:100%; aspect-ratio:16/9; background:#1a1a1a;
-  border-radius:12px; display:flex; align-items:center; justify-content:center;
-  color:#444; font-size:13px; border:1px dashed #333;
-}
-.now-playing { font-size:13px; font-weight:bold; color:#ccc; line-height:1.5; }
-.now-playing span { color:#e50914; }
-.error-msg {
-  padding:8px 12px; background:#3a1010; border-radius:8px;
-  font-size:12px; color:#e55; display:none; border:1px solid #6a2020;
-}
+/* SEARCH */
+.search-box{padding:2px;position:sticky;top:250px;z-index:9998;background:black;}
+.search-box input{width:100%;padding:4px;font-size:12px;border:none;outline:none;border-radius:10px;background:#111;color:white;}
 
-/* Empty / loading state */
-.status-msg {
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  gap:16px; padding:60px 20px; text-align:center; color:#555;
-}
-.status-msg .icon { font-size:48px; }
-.status-msg p { font-size:14px; line-height:1.6; }
-.status-msg strong { color:#888; }
+/* GROUP TABS */
+.group-tabs{display:flex;overflow-x:auto;gap:6px;padding:6px;background:#000;position:sticky;top:286px;z-index:9997;}
+.group-tabs::-webkit-scrollbar{display:none;}
+.group-tab{background:#111;color:white;border:1px solid #00cfff;border-radius:12px;padding:6px 10px;cursor:pointer;white-space:nowrap;font-size:13px;}
+.group-tab.active-tab{background:#00cfff;color:black;font-weight:bold;}
 
-/* Channels panel */
-.channels-panel {
-  flex:1; overflow-y:auto; padding:14px 14px 20px 0;
-}
-.channels-panel::-webkit-scrollbar { width:4px; }
-.channels-panel::-webkit-scrollbar-thumb { background:#333; border-radius:4px; }
-
-.section { margin-bottom:24px; }
-.section-title {
-  font-size:15px; font-weight:bold; margin-bottom:10px;
-  padding-left:8px; border-left:3px solid #e50914;
-}
-
-.channel-row {
+/* CHANNEL GRID — KEY FIX: overflow-y:auto with fixed height */
+.channel-grid{
   display:grid;
-  grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
-  gap:8px;
-}
-.channel-card {
-  background:#1e1e1e; border-radius:10px; overflow:hidden;
-  cursor:pointer; transition:transform .2s, background .2s;
-  border:1px solid transparent;
-}
-.channel-card:hover { transform:scale(1.05); background:#2a2a2a; border-color:#555; }
-.channel-card.active { border-color:#e50914; background:#2a2a2a; }
-.channel-card img {
-  width:100%; height:68px; object-fit:contain;
-  background:#fff; padding:6px; display:block;
-}
-.channel-info { padding:6px 8px; }
-.channel-name {
-  font-size:11px; font-weight:bold;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
-}
-.group-name {
-  font-size:10px; color:#777; margin-top:2px;
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  grid-template-columns:repeat(3,1fr);
+  gap:12px;
+  padding:12px;
+  overflow-y:auto;
+  overflow-x:hidden;
+  /* height is set dynamically by JS so it always fits the screen */
+  height:calc(100vh - 380px);
+  padding-bottom:20px;
+  align-content:start;
+  -webkit-overflow-scrolling:touch;
 }
 
-/* Mobile */
-@media(max-width:700px){
-  .main-layout { flex-direction:column; min-height:auto; }
-  .player-panel { width:100%; position:static; height:auto; }
-  .channels-panel { overflow-y:visible; padding:0 10px 20px; }
-  .search { width:130px; }
-  .channel-row { grid-template-columns:repeat(auto-fill,minmax(95px,1fr)); }
+/* CHANNEL */
+.channel{background:white;border-radius:20px;padding:4px;height:75px;display:flex;justify-content:center;align-items:center;cursor:pointer;border:2px solid #00cfff;box-shadow:0 0 12px rgba(0,207,255,.5);transition:.3s;position:relative;}
+.channel:hover{transform:scale(1.03);}
+.channel img{width:75%;height:75%;object-fit:fill;}
+.active{border:3px solid #00ff84 !important;box-shadow:0 0 18px #00ff84,0 0 28px rgba(0,255,132,.8);}
+.channel-name{position:absolute;bottom:2px;left:0;right:0;font-size:10px;text-align:center;color:#fff;background:rgba(0,0,0,.6);border-radius:0 0 12px 12px;padding:1px;}
+.fav-btn{position:absolute;top:2px;right:4px;font-size:18px;z-index:5;cursor:pointer;}
+
+/* LIVE COUNTER */
+.live-counter{position:fixed;left:15px;bottom:60px;z-index:99999;background:rgba(0,0,0,.80);padding:12px 16px;border-radius:18px;font-size:12px;font-weight:bold;color:white;backdrop-filter:blur(10px);box-shadow:0 0 14px rgba(0,255,100,.5);opacity:1;transition:.4s;}
+
+/* CONTACT */
+.contact-title{text-align:center;font-size:12px;font-weight:bold;margin-top:0;margin-bottom:0;color:white;text-shadow:0 0 10px red;}
+.social-box{display:flex;justify-content:center;gap:10px;padding-bottom:0;}
+.social-box a{width:35px;height:35px;border-radius:50%;display:flex;justify-content:center;align-items:center;font-size:20px;text-decoration:none;color:white;}
+.telegram{background:#229ED9;}
+.facebook{background:#1877F2;}
+
+/* FOOTER */
+.footer{text-align:center;padding:2px;font-size:12px;font-weight:bold;border-top:2px solid red;}
+.footer span{color:red;}
+
+/* DARK MODE */
+body.darkmode .channel{background:#121212 !important;border-color:#333 !important;box-shadow:none !important;}
+body.darkmode .channel img{filter:brightness(.75) contrast(.95);}
+
+/* LOADING SPINNER */
+#loadingSpinner{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10000;font-size:22px;background:rgba(0,0,0,.35);padding:4px 8px;border-radius:50%;}
+
+/* BUTTONS */
+#themeToggle{background:transparent !important;color:#ffcc33;border:none !important;border-radius:0 !important;padding:0 !important;margin:0 !important;cursor:pointer;box-shadow:none !important;font-size:18px;position:absolute !important;right:8px !important;top:50% !important;transform:translateY(-50%) !important;}
+#refreshBtn{position:absolute;left:8px;top:50%;transform:translateY(-50%);z-index:100001;width:34px;height:34px;background:#000;color:#ffcc33;border:1px solid #222;border-radius:50%;box-shadow:none;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;}
+
+/* NOTICE */
+.notice-bar{display:flex;align-items:center;background:#0b0b0b;border-top:1px solid #222;border-bottom:1px solid #222;height:26px;overflow:hidden;}
+.notice-label{background:#c62828;color:#fff;font-weight:600;padding:0 8px;height:26px;display:flex;align-items:center;flex-shrink:0;font-size:11px;}
+.notice-scroll{flex:1;color:#ffd54a;font-size:11px;}
+
+/* DESKTOP */
+@media(min-width:900px){
+  video{height:620px !important;}
+  .channel-grid{grid-template-columns:repeat(8,1fr) !important;gap:14px !important;height:calc(100vh - 760px) !important;padding-bottom:180px !important;}
+  .channel{height:95px !important;}
+  .channel-name{font-size:11px !important;}
+  .search-box{top:620px !important;}
+  .group-tabs{top:656px !important;}
 }
 </style>
 </head>
 <body>
 
-<header>
-  <div class="logo">Norris TV</div>
-  <div class="header-right">
-    <input type="text" class="search" id="search" placeholder="Search channels…">
-    <button class="load-btn" onclick="document.getElementById('fileInput').click()">📂 Load M3U</button>
-    <input type="file" id="fileInput" accept=".m3u,.m3u8">
-  </div>
-</header>
-
-<div class="main-layout">
-  <div class="player-panel">
-    <div class="player-placeholder" id="placeholder">▶ Select a channel</div>
-    <video id="video" controls></video>
-    <div class="now-playing" id="nowPlaying"></div>
-    <div class="error-msg" id="errorMsg">⚠ Stream failed to load</div>
-  </div>
-  <div class="channels-panel">
-    <div id="categories">
-      <div class="status-msg" id="statusMsg">
-        <div class="icon">📡</div>
-        <p>Loading <strong>playlist.m3u</strong>…</p>
-      </div>
-    </div>
+<!-- HEADER -->
+<div class="header">
+  <div class="header-inner">
+    <button id="refreshBtn" title="Refresh" onclick="location.reload()">
+      <i class="fas fa-rotate-right"></i>
+    </button>
+    <h1>Norris TV</h1>
+    <button id="themeToggle" title="Dark Mode" onclick="document.body.classList.toggle('darkmode')">🌙</button>
   </div>
 </div>
 
+<!-- LIVE COUNTER -->
+<div class="live-counter">
+  🟢 Live Users : <span id="liveUsers">0</span><br>
+  👁 Total Views : <span id="totalViews">0</span>
+</div>
+
+<!-- PLAYER -->
+<div class="player-box">
+  <video id="video" autoplay playsinline controls></video>
+  <div id="loadingSpinner">⏳</div>
+  <div class="custom-controls" id="customControls">
+    <button class="control-btn" onclick="prevChannel()">⏮</button>
+    <button class="control-btn" onclick="togglePlay()">⏯</button>
+    <button class="control-btn" onclick="nextChannel()">⏭</button>
+  </div>
+</div>
+
+<!-- NOTICE -->
+<div class="notice-bar">
+  <div class="notice-label">NOTICE</div>
+  <div class="notice-scroll">
+    <marquee scrollamount="3">📺 Welcome to Norris TV — Your free IPTV experience. Enjoy live channels anytime, anywhere. If any channel is not working, try refreshing. For best experience use a compatible browser.</marquee>
+  </div>
+</div>
+
+<!-- SEARCH -->
+<div class="search-box">
+  <input type="text" id="search" placeholder="Search Channel..." oninput="searchChannels()">
+</div>
+
+<!-- GROUP TABS -->
+<div class="group-tabs" id="groupTabs"></div>
+
+<!-- CHANNELS -->
+<div class="channel-grid" id="channelGrid"></div>
+
 <script>
-const video         = document.getElementById("video");
-const placeholder   = document.getElementById("placeholder");
-const nowPlaying    = document.getElementById("nowPlaying");
-const categoriesDiv = document.getElementById("categories");
-const statusMsg     = document.getElementById("statusMsg");
-const searchInput   = document.getElementById("search");
-const errorMsg      = document.getElementById("errorMsg");
-const fileInput     = document.getElementById("fileInput");
+const playlist = 'https://raw.githubusercontent.com/Rakib49/Rakibiptv/refs/heads/main/aynaott.m3u';
 
-let channels  = [];
+let channels = [];
+let filteredChannels = [];
+let currentIndex = 0;
+let currentGroup = 'All';
+let favorites = JSON.parse(localStorage.getItem('norrisfavorites') || '[]');
 let activeHls = null;
-let activeCard = null;
 
-// Try fetching playlist.m3u from the same directory
-fetch("playlist.m3u")
-  .then(res => {
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    return res.text();
-  })
+/* RECALCULATE grid height on resize */
+function fixGridHeight() {
+  const grid = document.getElementById('channelGrid');
+  const gridTop = grid.getBoundingClientRect().top + window.scrollY;
+  // On mobile, body is overflow:hidden so we use window.innerHeight
+  const available = window.innerHeight - gridTop;
+  grid.style.height = Math.max(150, available) + 'px';
+}
+window.addEventListener('resize', fixGridHeight);
+
+/* LOAD PLAYLIST */
+fetch(playlist)
+  .then(r => r.text())
   .then(data => {
-    channels = parseM3U(data);
-    if (channels.length === 0) {
-      showStatus("⚠️", "playlist.m3u was found but contains no channels.");
-    } else {
-      renderCategories(channels);
+    const lines = data.split('\n');
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith('#EXTINF')) {
+        const info = lines[i];
+        const url = (lines[i+1] || '').trim();
+        if (!url || url.startsWith('#')) continue;
+        const name = info.split(',').slice(1).join(',').trim();
+        const logo = (info.match(/tvg-logo="(.*?)"/) || [])[1] || '';
+        const group = (info.match(/group-title="(.*?)"/i) || [])[1] || 'Other';
+        channels.push({ name, url, logo, group });
+      }
     }
+    buildTabs();
+    filteredChannels = channels;
+    renderChannels();
+    fixGridHeight();
+    if (channels.length > 0) playChannel(0);
   })
-  .catch(err => {
-    showStatus(
-      "📂",
-      `<strong>playlist.m3u not found</strong> (${err.message})<br><br>
-       Make sure <code>playlist.m3u</code> is committed to your GitHub repo<br>
-       in the same folder as <code>index.html</code>.<br><br>
-       Or use <strong>Load M3U</strong> above to open it manually.`
-    );
+  .catch(() => {
+    document.getElementById('channelGrid').innerHTML =
+      '<p style="color:#e55;padding:20px;grid-column:1/-1">⚠ Could not load playlist. Check your internet connection.</p>';
+    fixGridHeight();
   });
 
-// Manual file load
-fileInput.addEventListener("change", e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = ev => {
-    channels = parseM3U(ev.target.result);
-    if (channels.length === 0) {
-      showStatus("⚠️", "File loaded but no channels were found.");
-    } else {
-      renderCategories(channels);
-    }
-  };
-  reader.readAsText(file);
-});
-
-function showStatus(icon, msg) {
-  statusMsg.style.display = "flex";
-  statusMsg.querySelector(".icon").textContent = icon;
-  statusMsg.querySelector("p").innerHTML = msg;
+function normalizeGroup(g) {
+  g = (g || '').toLowerCase();
+  if (['bangla','bangladesh','indian bangla','inbangla'].includes(g)) return 'Bangla';
+  if (g.includes('world cup') || g.includes('fifa')) return '🏆 FIFA World Cup';
+  if (g.includes('sport')) return 'Sports';
+  if (g.includes('news')) return 'News';
+  if (g.includes('movie')) return 'Movies';
+  if (g.includes('music')) return 'Music';
+  if (g.includes('kid')) return 'Kids';
+  if (['english','hindi','urdhu'].includes(g)) return 'International';
+  if (['entertainment','drama'].includes(g)) return 'Entertainment';
+  return 'Others';
 }
 
-function parseM3U(data) {
-  const result = [];
-  const lines  = data.split("\n");
-  for (let i = 0; i < lines.length; i++) {
-    if (lines[i].startsWith("#EXTINF")) {
-      const info = lines[i];
-      const url  = lines[i + 1]?.trim();
-      if (!url || url.startsWith("#")) continue;
-      const name  = info.split(",").pop().trim();
-      const logo  = info.match(/tvg-logo="(.*?)"/);
-      const group = info.match(/group-title="(.*?)"/);
-      result.push({
-        name,
-        url,
-        logo:  logo  ? logo[1]  : "",
-        group: group ? group[1] : "Others"
-      });
-    }
-  }
-  return result;
+function buildTabs() {
+  const tabs = document.getElementById('groupTabs');
+  const groups = ['All','❤️ Favorites','Bangla','🏆 FIFA World Cup','Sports','News','Entertainment','Movies','Music','Kids','International','Others'];
+  tabs.innerHTML = groups.map(g =>
+    `<button class="group-tab ${g==='All'?'active-tab':''}" onclick="filterGroup('${g}',this)">${g}</button>`
+  ).join('');
 }
 
-function renderCategories(list) {
-  categoriesDiv.innerHTML = "";
-
-  if (list.length === 0) {
-    showStatus("🔍", "No channels match your search.");
-    return;
+function filterGroup(group, btn) {
+  currentGroup = group;
+  document.querySelectorAll('.group-tab').forEach(x => x.classList.remove('active-tab'));
+  if (btn) btn.classList.add('active-tab');
+  if (group === 'All') {
+    filteredChannels = channels;
+  } else if (group === '❤️ Favorites') {
+    filteredChannels = channels.filter(c => favorites.includes(c.url));
+  } else {
+    filteredChannels = channels.filter(c => normalizeGroup(c.group) === group);
   }
+  renderChannels();
+  document.getElementById('channelGrid').scrollTop = 0;
+}
 
-  const grouped = {};
-  list.forEach(ch => {
-    if (!grouped[ch.group]) grouped[ch.group] = [];
-    grouped[ch.group].push(ch);
-  });
+function renderChannels() {
+  const grid = document.getElementById('channelGrid');
+  grid.innerHTML = '';
 
-  Object.keys(grouped).forEach(group => {
-    const section = document.createElement("div");
-    section.className = "section";
-
-    const title = document.createElement("div");
-    title.className = "section-title";
-    title.textContent = `${group} (${grouped[group].length})`;
-    section.appendChild(title);
-
-    const row = document.createElement("div");
-    row.className = "channel-row";
-
-    grouped[group].forEach(ch => {
-      const card = document.createElement("div");
-      card.className = "channel-card";
-
-      const FALLBACK = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='110' height='68'%3E%3Crect fill='%23222' width='110' height='68'/%3E%3Ctext fill='%23555' font-size='10' x='55' y='38' text-anchor='middle'%3ENo Logo%3C/text%3E%3C/svg%3E";
-      const img = document.createElement("img");
-      img.src = ch.logo || FALLBACK;
-      img.alt = ch.name;
-      img.onerror = () => { img.src = FALLBACK; };
-
-      const info = document.createElement("div");
-      info.className = "channel-info";
-      info.innerHTML = `<div class="channel-name">${ch.name}</div><div class="group-name">${ch.group}</div>`;
-
-      card.appendChild(img);
-      card.appendChild(info);
-      card.addEventListener("click", () => playChannel(ch.url, ch.name, card));
-      row.appendChild(card);
+  filteredChannels.forEach((ch) => {
+    const div = document.createElement('div');
+    div.className = 'channel';
+    const isFav = favorites.includes(ch.url);
+    div.innerHTML = `
+      <div class="fav-btn">${isFav ? '❤️' : '🤍'}</div>
+      <img src="${ch.logo}" onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22%3E%3Crect fill=%22%23222%22 width=%2260%22 height=%2260%22/%3E%3C/svg%3E'">
+      <div class="channel-name">${ch.name}</div>
+    `;
+    div.addEventListener('click', () => playChannel(channels.indexOf(ch)));
+    div.querySelector('.fav-btn').addEventListener('click', e => {
+      e.stopPropagation();
+      if (favorites.includes(ch.url)) {
+        favorites = favorites.filter(x => x !== ch.url);
+      } else {
+        favorites.push(ch.url);
+      }
+      localStorage.setItem('norrisfavorites', JSON.stringify(favorites));
+      if (currentGroup === '❤️ Favorites') {
+        filteredChannels = channels.filter(c => favorites.includes(c.url));
+      }
+      renderChannels();
     });
-
-    section.appendChild(row);
-    categoriesDiv.appendChild(section);
+    grid.appendChild(div);
   });
+
+  // Contact footer
+  const contact = document.createElement('div');
+  contact.style.gridColumn = '1/-1';
+  contact.innerHTML = `
+    <div class="footer">© 2026 <span>NORRIS TV</span></div>
+  `;
+  grid.appendChild(contact);
+
+  fixGridHeight();
 }
 
-function playChannel(url, name, card) {
-  if (activeCard) activeCard.classList.remove("active");
-  activeCard = card;
-  card.classList.add("active");
+/* PLAY */
+function playChannel(index) {
+  currentIndex = index;
+  const video = document.getElementById('video');
+  const channel = channels[index];
+  if (!channel) return;
 
-  placeholder.style.display = "none";
-  video.style.display = "block";
-  errorMsg.style.display = "none";
-
+  // Destroy old HLS
   if (activeHls) { activeHls.destroy(); activeHls = null; }
 
   if (Hls.isSupported()) {
     const hls = new Hls({ enableWorker: true });
-    hls.loadSource(url);
+    hls.loadSource(channel.url);
     hls.attachMedia(video);
-    hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(() => {}));
-    hls.on(Hls.Events.ERROR, (_, d) => { if (d.fatal) errorMsg.style.display = "block"; });
+    hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(()=>{}));
     activeHls = hls;
   } else {
-    video.src = url;
-    video.play().catch(() => {});
+    video.src = channel.url;
+    video.play().catch(()=>{});
   }
 
-  nowPlaying.innerHTML = `<span>▶ Now Playing</span><br>${name}`;
+  // Update active card highlight
+  document.querySelectorAll('.channel').forEach((el, i) => {
+    el.classList.remove('active');
+    if (filteredChannels[i] && filteredChannels[i].url === channel.url) {
+      el.classList.add('active');
+      // Scroll card into view within the grid
+      el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  });
 
-  if (window.innerWidth <= 700) {
-    document.querySelector(".player-panel").scrollIntoView({ behavior:"smooth" });
-  }
+  // Update view count
+  const totalViews = document.getElementById('totalViews');
+  totalViews.textContent = parseInt(totalViews.textContent || '0') + 1;
 }
 
-searchInput.addEventListener("input", () => {
-  const val = searchInput.value.toLowerCase().trim();
-  renderCategories(val ? channels.filter(c =>
-    c.name.toLowerCase().includes(val) || c.group.toLowerCase().includes(val)
-  ) : channels);
-});
+function nextChannel() {
+  currentIndex++;
+  if (currentIndex >= channels.length) currentIndex = 0;
+  playChannel(currentIndex);
+}
+
+function prevChannel() {
+  currentIndex--;
+  if (currentIndex < 0) currentIndex = channels.length - 1;
+  playChannel(currentIndex);
+}
+
+function togglePlay() {
+  const video = document.getElementById('video');
+  video.paused ? video.play() : video.pause();
+}
+
+function searchChannels() {
+  const val = document.getElementById('search').value.toLowerCase();
+  filteredChannels = val
+    ? channels.filter(c => c.name.toLowerCase().includes(val) || c.group.toLowerCase().includes(val))
+    : channels;
+  renderChannels();
+}
+
+/* AUTO-HIDE controls */
+const controls = document.getElementById('customControls');
+const visitor = document.querySelector('.live-counter');
+function showUI() {
+  controls.style.opacity = '1';
+  visitor.style.opacity = '1';
+  clearTimeout(showUI._t);
+  showUI._t = setTimeout(() => {
+    controls.style.opacity = '0';
+    visitor.style.opacity = '0';
+  }, 2500);
+}
+showUI();
+document.querySelector('.player-box').addEventListener('click', showUI);
 </script>
+
 </body>
 </html>
