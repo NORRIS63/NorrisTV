@@ -409,6 +409,27 @@ renderCategories(filtered);
 
 });
 
+if(window.innerWidth < 1200){
+
+window.addEventListener("scroll", function(){
+
+const player =
+document.querySelector(".player-wrapper");
+
+const scrollTop =
+window.pageYOffset ||
+document.documentElement.scrollTop;
+
+if(scrollTop > 250){
+player.classList.add("mini");
+}else{
+player.classList.remove("mini");
+}
+
+});
+
+}
+
 </script>
 
 </body>
